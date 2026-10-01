@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Counter | Control de Aforo</title>
+    <meta name="description" content="Contador moderno de personas con control de hombres y mujeres.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #07111f;
+            --card: rgba(10, 23, 40, .72);
+            --border: rgba(255,255,255,.12);
+            --text: #f5f7fb;
+            --muted: #aab7c8;
+            --cyan: #4fdcff;
+            --pink: #ff5e9c;
+            --green: #54e39a;
+            --danger: #ff6577;
+        }
+        body {
+            min-height: 100vh;
+            font-family: Inter, system-ui, sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(135deg, rgba(3,12,24,.92), rgba(8,30,51,.68)),
+                url("https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=2200&q=85")
+                center/cover fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            width: 430px; height: 430px;
+            border-radius: 50%;
+            background: rgba(79,220,255,.14);
+            filter: blur(90px);
+            top: -130px; left: -100px;
+            pointer-events: none;
+        }
+        body::after {
+            content: "";
+            position: fixed;
+            width: 420px; height: 420px;
+            border-radius: 50%;
+            background: rgba(255,94,156,.10);
+            filter: blur(100px);
+            bottom: -160px; right: -120px;
+            pointer-events: none;
+        }
+        .app {
+            width: min(100%, 1050px);
+            position: relative;
+            z-index: 1;
+        }
+        .glass {
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 80px rgba(0,0,0,.45);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+        header {
+            border-radius: 28px 28px 0 0;
+            padding: 26px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .brand { display: flex; align-items: center; gap: 14px; }
+        .logo {
+            width: 50px; height: 50px;
+            display: grid; place-items: center;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--cyan), #3477ff);
+            color: #03101b;
+            font-size: 24px;
+            box-shadow: 0 10px 30px rgba(79,220,255,.25);
+        }
+        h1 { font-size: clamp(22px, 4vw, 30px); letter-spacing: -.8px; }
+        .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .status {
+            display: flex; align-items: center; gap: 8px;
+            color: #bcefd5; font-size: 12px; font-weight: 700;
+            background: rgba(84,227,154,.08);
+            border: 1px solid rgba(84,227,154,.2);
+            padding: 9px 13px; border-radius: 999px;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); }
+        main {
+            border-radius: 0 0 28px 28px;
+            padding: 28px 30px 30px;
+        }
+        .total {
+            text-align: center;
+            padding: 34px 20px 30px;
+            border-radius: 24px;
+            background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+            border: 1px solid rgba(255,255,255,.09);
+            margin-bottom: 22px;
+        }
+        .label { color: var(--muted); text-transform: uppercase; letter-spacing: 2px; font-size: 11px; font-weight: 700; }
+        .total-number {
+            font-size: clamp(70px, 13vw, 120px);
+            line-height: .95;
+            font-weight: 800;
+            letter-spacing: -6px;
+            margin: 12px 0 7px;
+            background: linear-gradient(90deg, #fff, var(--cyan));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .gender-bar-wrap{margin:24px auto 0;width:min(100%,720px);text-align:left}.gender-bar-labels{display:flex;justify-content:space-between;gap:15px;margin-bottom:9px;font-size:12px;font-weight:700}.men-percent{color:var(--cyan)}.women-percent{color:var(--pink)}.gender-bar{width:100%;height:15px;border-radius:999px;overflow:hidden;display:flex;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}.bar-men,.bar-women{height:100%;transition:width .35s ease}.bar-men{background:linear-gradient(90deg,#3477ff,var(--cyan))}.bar-women{background:linear-gradient(90deg,var(--pink),#ff8ab7)}
+        #peopleText { font-size: 15px; color: #d8e2ed; }
+        .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .person-card {
+            border-radius: 22px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        .person-card::after {
+            content: "";
+            position: absolute;
+            width: 130px; height: 130px;
+            border-radius: 50%;
+            right: -45px; top: -55px;
+            filter: blur(2px);
+            opacity: .12;
+        }
+        .male::after { background: var(--cyan); }
+        .female::after { background: var(--pink); }
+        .card-top { display: flex; align-items: center; justify-content: space-between; }
+        .icon {
+            width: 48px; height: 48px; border-radius: 15px;
+            display: grid; place-items: center;
+            font-size: 23px;
+        }
+        .male .icon { background: rgba(79,220,255,.13); color: var(--cyan); }
+        .female .icon { background: rgba(255,94,156,.13); color: var(--pink); }
+        .card-name { font-weight: 700; margin-top: 18px; }
+        .card-number { font-size: 46px; font-weight: 800; margin: 2px 0 15px; }
+        .controls { display: flex; gap: 9px; }
+        button {
+            border: 0; cursor: pointer;
+            font-family: inherit; font-weight: 700;
+            transition: transform .16s, opacity .16s, box-shadow .16s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+        .control {
+            min-width: 48px; height: 42px; padding: 0 13px; border-radius: 13px;
+            font-size: 20px;
+            color: white;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .male .plus { background: rgba(79,220,255,.16); color: var(--cyan); }
+        .female .plus { background: rgba(255,94,156,.16); color: var(--pink); }
+        .actions {
+            display: flex; gap: 12px; justify-content: center;
+            margin-top: 22px; flex-wrap: wrap;
+        }
+        .reset {
+            padding: 13px 22px; border-radius: 14px;
+            color: white; background: rgba(255,255,255,.07);
+            border: 1px solid var(--border);
+        }
+        .export {
+            padding: 13px 22px; border-radius: 14px;
+            color: #07111f; background: var(--cyan);
+            border: 1px solid rgba(79,220,255,.35);
+            box-shadow: 0 8px 25px rgba(79,220,255,.18);
+        }
+        .subtract {
+            padding: 13px 22px; border-radius: 14px;
+            background: rgba(255,101,119,.12);
+            color: #ff9aa7; border: 1px solid rgba(255,101,119,.2);
+        }
+        .info {
+            margin-top: 22px; text-align: center;
+            color: var(--muted); font-size: 12px;
+            line-height: 1.6;
+        }
+        .toast {
+            position: fixed; left: 50%; bottom: 24px;
+            transform: translate(-50%, 120px);
+            background: #101d2e; color: #fff;
+            border: 1px solid var(--border);
+            padding: 12px 18px; border-radius: 12px;
+            font-size: 13px; box-shadow: 0 12px 40px rgba(0,0,0,.35);
+            transition: transform .25s;
+            z-index: 5;
+        }
+        .toast.show { transform: translate(-50%, 0); }
+        @media (max-width: 650px) {
+            body { padding: 12px; }
+            header { padding: 20px; align-items: flex-start; }
+            main { padding: 20px; }
+            .status { display: none; }
+            .cards { grid-template-columns: 1fr; }
+            .total { padding: 28px 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <header class="glass">
+        <div class="brand">
+            <div class="logo">👥</div>
+            <div>
+                <h1>Control de Personas</h1>
+                <p class="subtitle">Contador de aforo en tiempo real</p>
+            </div>
+        </div>
+        <div class="status"><span class="dot"></span>SISTEMA ACTIVO</div>
+    </header>
+
+    <main class="glass">
+        <section class="total">
+            <div class="label">Personas presentes</div>
+            <div class="total-number" id="total">0</div>
+            <div id="peopleText">0 Personas</div><div class="gender-bar-wrap"><div class="gender-bar-labels"><span class="men-percent" id="menPercent">👨 Hombres 0%</span><span class="women-percent" id="womenPercent">Mujeres 0% 👩</span></div><div class="gender-bar"><div class="bar-men" id="barMen"></div><div class="bar-women" id="barWomen"></div></div></div>
+        </section>
+
+        <section class="cards">
+            <article class="person-card glass male">
+                <div class="card-top">
+                    <div class="icon">♂</div>
+                </div>
+                <div class="card-name">Hombres</div>
+                <div class="card-number" id="men">0</div>
+                <div class="controls">
+                    <button class="control minus" id="menMinus" onclick="changeCount('men', -1)" aria-label="Restar hombre">−</button>
+                    <button class="control plus" onclick="changeCount('men', 1)" aria-label="Añadir hombre">+1 Hombre</button>
+                </div>
+            </article>
+
+            <article class="person-card glass female">
+                <div class="card-top">
+                    <div class="icon">♀</div>
+                </div>
+                <div class="card-name">Mujeres</div>
+                <div class="card-number" id="women">0</div>
+                <div class="controls">
+                    <button class="control minus" id="womenMinus" onclick="changeCount('women', -1)" aria-label="Restar mujer">−</button>
+                    <button class="control plus" onclick="changeCount('women', 1)" aria-label="Añadir mujer">+1 Mujer</button>
+                </div>
+            </article>
+        </section>
+
+        <div class="actions">
+            <button class="subtract" onclick="subtractPerson()">− 1 Persona</button>
+            <button class="reset" onclick="resetCounter()">↻ Reiniciar contador</button>
+            <button class="export" onclick="exportCounter()">⇩ Exportar contador</button>
+        </div>
+
+        <p class="info">El contador nunca puede ser negativo. Al restar una persona se descuenta primero del grupo que tenga personas registradas.</p>
+    </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    let men = 0;
+    let women = 0;
+
+    function updateUI() {
+        const total = men + women;
+        document.getElementById('men').textContent = men;
+        document.getElementById('women').textContent = women;
+        document.getElementById('total').textContent = total;
+        document.getElementById('peopleText').textContent =
+            total === 1 ? '1 Persona' : `${total} Personas`;
+
+        const menPercentage = total === 0 ? 0 : Math.round((men / total) * 100);
+        const womenPercentage = total === 0 ? 0 : 100 - menPercentage;
+        document.getElementById('menPercent').textContent = `👨 Hombres ${menPercentage}%`;
+        document.getElementById('womenPercent').textContent = `Mujeres ${womenPercentage}% 👩`;
+        document.getElementById('barMen').style.width = `${menPercentage}%`;
+        document.getElementById('barWomen').style.width = `${womenPercentage}%`;
+
+        document.getElementById('menMinus').disabled = men === 0;
+        document.getElementById('womenMinus').disabled = women === 0;
+    }
+
+    function changeCount(type, amount) {
+        if (type === 'men') {
+            men = Math.max(0, men + amount);
+        } else {
+            women = Math.max(0, women + amount);
+        }
+        updateUI();
+    }
+
+    function subtractPerson() {
+        if (men + women === 0) {
+            showToast('No hay personas para restar.');
+            return;
+        }
+
+        if (men > 0) men--;
+        else if (women > 0) women--;
+
+        updateUI();
+    }
+
+    function resetCounter() {
+        if (men === 0 && women === 0) return;
+        men = 0;
+        women = 0;
+        updateUI();
+        showToast('Contador reiniciado.');
+    }
+
+
+    function exportCounter() {
+        const total = men + women;
+        const menPercentage = total === 0 ? 0 : Math.round((men / total) * 100);
+        const womenPercentage = total === 0 ? 0 : Math.round((women / total) * 100);
+
+        const date = new Date().toLocaleString('es-ES');
+
+        const report = [
+            '================================',
+            '      CONTADOR DE PERSONAS',
+            '================================',
+            '',
+            `Fecha de exportación: ${date}`,
+            '',
+            `TOTAL: ${total} ${total === 1 ? 'Persona' : 'Personas'}`,
+            `HOMBRES: ${men} (${menPercentage}%)`,
+            `MUJERES: ${women} (${womenPercentage}%)`,
+            '',
+            '================================'
+        ].join('\\n');
+
+        const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = 'contador-personas.txt';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        showToast('Contador exportado correctamente.');
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(window.toastTimer);
+        window.toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    updateUI();
+</script>
+</body>
+</html>
